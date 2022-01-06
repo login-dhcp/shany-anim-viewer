@@ -12,20 +12,24 @@
         <script src="https://shinycolors.info/utils/shany-anim-viewer/docs/spine-webgl.js?v=3.7.94"></script>
     </head>
     <body ondrop="DropHandler(event);" ondragover="DragOverHandler(event);">
-        <canvas id="canvas"></canvas>
-        <div>
+        <div id="aside">
             <span>Type:</span>
             <select id="typeList"></select>
+            <br>
             <span>Idol:</span>
-            <select id="idolList"></select>
+            <select id="idolList" size="10"></select>
+            <br>
             <span>Animation:</span>
-            <select id="animationList"></select>
+            <select id="animationList" size="15"></select>
+            <br>
             <span>Skin:</span>
             <select id="skinList"></select>
+            <br>
             <span>Background Color:</span>
             <input id="color-picker" type="color" />
             <button onclick="ClearTrack();">Reset Animation</button>
         </div>
+        <canvas id="canvas"></canvas>
         <script src="main.js"></script>
     </body>
 </html>

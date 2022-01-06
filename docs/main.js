@@ -298,6 +298,7 @@ function SetupTypeList() {
         option.selected = type === assetType;
         typeList.appendChild(option);
     }
+    typeList.size = $("#typeList option").length;
 
     typeList.onchange = () => {
         assetType = typeList.value;
@@ -326,6 +327,7 @@ function SetupIdolList() {
         option.value = asset.value;
         idolList.appendChild(option);
     }
+    // idolList.size = $("#idolList option").length;
 
     idolList.onchange = () => {
         assetID = idolList.value;
@@ -354,6 +356,7 @@ function SetupAnimationList() {
         option.selected = name === activeAnimation;
         animationList.appendChild(option);
     }
+    // animationList.size = $("#animationList option").length;
 
     animationList.onchange = () => {
         const state = asset.state;
@@ -401,6 +404,7 @@ function SetupSkinList() {
         option.selected = name === activeSkin;
         skinList.appendChild(option);
     }
+    skinList.size = $("#skinList option").length;
 
     skinList.onchange = () => {
         const skeleton = asset.skeleton;

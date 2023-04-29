@@ -14,6 +14,8 @@ let pathTexture = null;
 
 let asset = null;
 
+let assetIdol = 1;
+let assetClothes = "0000010010";
 let assetType = "cb";
 let assetID = "0000010010";
 
@@ -22,7 +24,7 @@ let assetInfo = {};
 
 let backgroundColor = [0, 0, 0];
 
-const dataURL = "https://shinycolors.info/utils/shany-anim-viewer_2/docs";
+const dataURL = ".";
 
 const $ = document.querySelectorAll.bind(document);
 
@@ -58,21 +60,45 @@ async function Init() {
     assetInfo = (await axios.get(dataURL + "/asset.json")).data;
 
     // 애셋 데이터 가공
+    // todo move this to asset_updater
     for (let key in assetInfo) {
-        assetInfo[key] = assetInfo[key].map((id) => {
-            const idArray = id.split("").map((item) => {
-                return parseInt(item);
-            });
-            return {
-                value: id,
-                type: idArray.shift(),
-                special_type: idArray.shift(),
-                rarity: idArray.shift(),
-                idol_id: parseInt(idArray.splice(0, 3).join("")),
-                release_id: parseInt(idArray.splice(0, 3).join("")),
-                other: idArray.shift()
-            };
-        });
+        var items = [];
+        for (var type of Object.keys(assetInfo[key])) {
+            for (const rawID of assetInfo[key][type]) {
+                // todo this holds if item is number...
+                var idArray = rawID.split("").map((item) => {
+                    return parseInt(item);
+                });
+                const item = {
+                    "value": rawID,
+                    "type_": idArray.shift(),
+                    "type": type,
+                    "special_type": idArray.shift(),
+                    "rarity": idArray.shift(),
+                    "idol_id": parseInt(idArray.splice(0, 3).join("")),
+                    "release_id": parseInt(idArray.splice(0, 3).join("")),
+                    "other": idArray.shift()
+                };
+                items.push(item);
+            }
+        }
+        assetInfo[key] = {};
+        for (const item of items) {
+            if (assetInfo[key][item["idol_id"]] === undefined) {
+                assetInfo[key][item["idol_id"]] = {
+                    "clothes": {},
+                };
+            }
+            var idol_clothes = assetInfo[key][item["idol_id"]]["clothes"];
+            if (idol_clothes[item["value"]] === undefined) {
+                idol_clothes[item["value"]] = {
+                    "type": [],
+                };
+            }
+            if (!idol_clothes[item["value"]]["type"].includes(item["type"])) {
+                idol_clothes[item["value"]]["type"].push(item["type"]);
+            }
+        }
     }
 
     // 배경 색상 선택기
@@ -81,8 +107,9 @@ async function Init() {
         backgroundColor = HexToRgb(event.target.value);
     };
 
-    SetupTypeList();
     SetupIdolList();
+    SetupClothesList();
+    SetupTypeList();
 
     LoadAsset();
 }
@@ -171,7 +198,7 @@ function LoadAsset() {
     // 메모리 관리를 위한 unload 작업
     assetManager.removeAll();
 
-    const path = [dataURL, "assets", assetType, assetID, "data"].join("/");
+    const path = [dataURL, "spine", "idols", assetType, assetClothes, "data"].join("/");
     assetManager.loadText(pathJSON || path + ".json");
     assetManager.loadText(pathAtlas || path + ".atlas");
     assetManager.loadTexture(pathTexture || path + ".png");
@@ -196,9 +223,9 @@ function Load() {
 function LoadSpine(initialAnimation, premultipliedAlpha) {
     // Load the texture atlas using name.atlas and name.png from the AssetManager.
     // The function passed to TextureAtlas is used to resolve relative paths.
-    const fileArray = [dataURL, "assets", assetType, assetID, "data"];
+    const fileArray = [dataURL, "spine", "idols", assetType, assetClothes, "data"];
     const filePath = fileArray.join("/");
-    const subPath = fileArray.slice(0, 4).join("/");
+    const subPath = fileArray.slice(0, 5).join("/");
 
     atlas = new spine.TextureAtlas(
         assetManager.get(pathAtlas || filePath + ".atlas"),
@@ -287,61 +314,87 @@ function CalculateBounds(skeleton) {
 function SetupTypeList() {
     const typeList = $("#typeList")[0];
     const typeTextList = gameInfo.type;
-
+    const typesData = assetInfo["idols"][assetIdol]["clothes"][assetClothes]["type"];
     typeList.innerHTML = "";
 
-    for (const type of Object.keys(assetInfo)) {
+    for (const typeKey of typesData) {
         const option = document.createElement("option");
-        const typeText = _.find(typeTextList, { id: type }) || { name: "타입" };
+        const typeText = _.find(typeTextList, { id: typeKey }) || { name: "타입" };
         option.textContent = typeText.name;
-        option.value = type;
-        option.selected = type === assetType;
+        option.value = typeKey;
+        option.selected = typeKey === assetType;
         typeList.appendChild(option);
     }
-    typeList.size = $("#typeList option").length;
 
     typeList.onchange = () => {
         assetType = typeList.value;
-        SetupIdolList();
         ClearDragStatus();
         requestAnimationFrame(LoadAsset);
     };
+
+    typeList.size = $("#typeList option").length;
 
     const firstNode = $("#typeList option")[0];
     firstNode.selected = true;
     assetType = firstNode.value;
 }
 
+function SetupClothesList() {
+    const clothesList = $("#clothesList")[0];
+    const clothesData = assetInfo["idols"][assetIdol]["clothes"];
+    clothesList.innerHTML = "";
+
+    for (const clothesKey of Object.keys(clothesData)) {
+        const option = document.createElement("option");
+        const clothesID = clothesKey; // todo
+        option.textContent = clothesID; // todo
+        option.value = clothesID;
+        option.selected = clothesID === assetClothes;
+        clothesList.appendChild(option);
+    }
+
+    clothesList.onchange = () => {
+        assetClothes = clothesList.value;
+        SetupTypeList();
+        ClearDragStatus();
+        requestAnimationFrame(LoadAsset);
+    }
+
+    const firstNode = $("#clothesList option")[0];
+    firstNode.selected = true;
+    assetClothes = firstNode.value;
+}
+
 function SetupIdolList() {
     const idolList = $("#idolList")[0];
     const idolTextList = gameInfo.idol;
 
+    const charactersData = assetInfo["idols"];
     idolList.innerHTML = "";
 
-    for (const asset of assetInfo[assetType]) {
+    for (const idolKey of Object.keys(charactersData)) {
         const option = document.createElement("option");
-        const idolText = _.find(idolTextList, { id: asset.idol_id }) || {
+//        const idolText = charactersData[idolKey];
+        const idolText = _.find(idolTextList, { id: parseInt(idolKey) }) || {
             name: "아이돌"
         };
-        option.textContent = idolText.name.split(" ").pop();
-	const idolRarity = _.find(gameInfo.rarity, {id:asset.rarity}) || {
-	    name: "Unknown"
-	};
-        option.textContent += ""+idolRarity.name.split(" ").pop()+asset.release_id;
-	option.value = asset.value;
+        option.textContent = idolText["name"].split(" ").pop();
+        option.value = idolKey;
+        option.selected = idolKey === assetIdol;
         idolList.appendChild(option);
     }
-    // idolList.size = $("#idolList option").length;
 
     idolList.onchange = () => {
-        assetID = idolList.value;
+        assetIdol = idolList.value;
+        SetupClothesList();
+        SetupTypeList();
         ClearDragStatus();
         requestAnimationFrame(LoadAsset);
-    };
+    }
 
     const firstNode = $("#idolList option")[0];
     firstNode.selected = true;
-    assetID = firstNode.value;
+    assetIdol = firstNode.value;
 }
 
 function SetupAnimationList() {

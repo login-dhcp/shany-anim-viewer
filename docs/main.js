@@ -22,7 +22,7 @@ let assetInfo = {};
 
 let backgroundColor = [0, 0, 0];
 
-const dataURL = "https://shinycolors.info/utils/shany-anim-viewer/docs";
+const dataURL = "https://shinycolors.info/utils/shany-anim-viewer_2/docs";
 
 const $ = document.querySelectorAll.bind(document);
 
@@ -324,7 +324,11 @@ function SetupIdolList() {
             name: "아이돌"
         };
         option.textContent = idolText.name.split(" ").pop();
-        option.value = asset.value;
+	const idolRarity = _.find(gameInfo.rarity, {id:asset.rarity}) || {
+	    name: "Unknown"
+	};
+        option.textContent += ""+idolRarity.name.split(" ").pop()+asset.release_id;
+	option.value = asset.value;
         idolList.appendChild(option);
     }
     // idolList.size = $("#idolList option").length;

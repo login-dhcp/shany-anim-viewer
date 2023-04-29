@@ -11,7 +11,7 @@ html {
 
 #aside {
     float: left;
-    width: 300px;
+    width: 400px;
     position: absolute;
     z-index: 1;
 }

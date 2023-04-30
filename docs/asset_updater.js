@@ -1,31 +1,48 @@
-var fs = require("fs");
+const { resolve } = require("path");
+const { readdir } = require('fs').promises;
+const fs = require("fs");
 
-const result = {};
-
-fs.readdir("./spine", function(error, filelist) {
-    for (file of filelist) {
-        result[file] = {};
-        var basedir = "./spine/" + file;
-        fs.readdir(basedir + "/cb", function (error, filelist2) {
-            result[file].cb = filelist2;
-            fs.readdir(basedir + "/cb_costume", function (error, filelist3) {
-                result[file].cb_costume = filelist3;
-                fs.readdir(basedir + "/stand", function (error, filelist4) {
-                    result[file].stand = filelist4;
-                    fs.readdir(basedir + "/stand_costume", function (error, filelist5) {
-                        result[file].stand_costume = filelist5;
-                        console.log(result);
-                        fs.writeFile(
-                            "./asset.json",
-                            JSON.stringify(result, null, 3),
-                            function (data) {
-                                console.log(data);
-                                process.exit(0);
-                            }
-                        );
-                    });
-                });
-            });
-        });
+async function* getFiles(dir) {
+    const dirents = await readdir(dir, { withFileTypes: true });
+    for (const dirent of dirents) {
+        const res = resolve(dir, dirent.name);
+        if (dirent.isDirectory()) {
+            yield* getFiles(res);
+        } else {
+            yield res;
+        }
     }
-});
+}
+
+;(async () => {
+    var result = {};
+    var filesList = [];
+
+    for await (const f of getFiles('./spine')) {
+        filesList.push(f);
+
+        if (f.split(".")[1] != "atlas") continue;
+        var str = f.split("spine/")[1];
+        var values = str.split("/");
+
+        const basedir = values[0];
+        const assetType = values[1];
+        const clothesID = values.slice(2, values.length-1).join("/");
+
+        if (result[basedir] === undefined) {
+            result[basedir] = {};
+        }
+        if (result[basedir][assetType] === undefined) {
+          result[basedir][assetType] = [];
+        }
+        result[basedir][assetType].push(clothesID);
+    }
+    console.log(result);
+    fs.writeFile("./asset.json",
+        JSON.stringify(result, null, 3),
+        function (data) {
+            console.log(data);
+            process.exit(0);
+        }
+    );
+})()

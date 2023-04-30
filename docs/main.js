@@ -18,15 +18,17 @@ let assetIdol = 1;
 let assetClothes = "0000010010";
 let assetType = "cb";
 let assetID = "0000010010";
+let assetBaseDir = "idols";
 
 let gameInfo = {};
 let assetInfo = {};
 
-let backgroundColor = [0, 0, 0];
+let backgroundColor = [0, 255, 0];
 
 const dataURL = ".";
 
 const $ = document.querySelectorAll.bind(document);
+let items = [];
 
 async function Init() {
     // Setup canvas and WebGL context. We pass alpha: false to canvas.getContext() so we don't use premultiplied alpha when
@@ -62,42 +64,72 @@ async function Init() {
     // 애셋 데이터 가공
     // todo move this to asset_updater
     for (let key in assetInfo) {
-        var items = [];
         for (var type of Object.keys(assetInfo[key])) {
             for (const rawID of assetInfo[key][type]) {
                 // todo this holds if item is number...
-                var idArray = rawID.split("").map((item) => {
-                    return parseInt(item);
-                });
-                const item = {
-                    "value": rawID,
-                    "type_": idArray.shift(),
-                    "type": type,
-                    "special_type": idArray.shift(),
-                    "rarity": idArray.shift(),
-                    "idol_id": parseInt(idArray.splice(0, 3).join("")),
-                    "release_id": parseInt(idArray.splice(0, 3).join("")),
-                    "other": idArray.shift()
-                };
-                items.push(item);
+                if (!isNaN(parseInt(rawID))) {
+                    var idArray = rawID.split("").map((item) => {
+                        return parseInt(item);
+                    });
+                    if (idArray.length === 10) {
+                        const item = {
+                            "basedir": key,
+                            "value": rawID,
+                            "type_": idArray.shift(),
+                            "type": type,
+                            "special_type": idArray.shift(),
+                            "rarity": idArray.shift(),
+                            "idol_id": parseInt(idArray.splice(0, 3).join("")),
+                            "release_id": parseInt(idArray.splice(0, 3).join("")),
+                            "other": idArray.shift()
+                        };
+                        items.push(item);
+                    }
+                    // else case is always(...) 3 digit idol number
+                    else {
+                        const item = {
+                            "basedir": key,
+                            "value": rawID,
+                            "type": type,
+                            "idol_id": parseInt(rawID),
+                        }
+                        items.push(item);
+                    }
+                }
+                // name can be "staff/" or "staff/voice/" or ...
+                else {
+                    const item = {
+                        "basedir": key,
+                        "value": rawID,
+                        "type": type,
+                        "idol_id": rawID.split("/")[0], // bad hack...
+                    }
+                    items.push(item);
+                }
             }
         }
-        assetInfo[key] = {};
-        for (const item of items) {
-            if (assetInfo[key][item["idol_id"]] === undefined) {
-                assetInfo[key][item["idol_id"]] = {
-                    "clothes": {},
-                };
-            }
-            var idol_clothes = assetInfo[key][item["idol_id"]]["clothes"];
-            if (idol_clothes[item["value"]] === undefined) {
-                idol_clothes[item["value"]] = {
-                    "type": [],
-                };
-            }
-            if (!idol_clothes[item["value"]]["type"].includes(item["type"])) {
-                idol_clothes[item["value"]]["type"].push(item["type"]);
-            }
+
+
+    }
+
+//    assetInfo = {};
+    assetInfo["idols"] = {};
+    for (const item of items) {
+        if (assetInfo["idols"][item["idol_id"]] === undefined) {
+            assetInfo["idols"][item["idol_id"]] = {
+                "clothes": {},
+            };
+        }
+        var idol_clothes = assetInfo["idols"][item["idol_id"]]["clothes"];
+        if (idol_clothes[item["value"]] === undefined) {
+            idol_clothes[item["value"]] = {
+                "type": [],
+                "basedir": [],
+            };
+        }
+        if (!idol_clothes[item["value"]]["type"].includes(item["type"])) {
+            idol_clothes[item["value"]]["type"].push(item["type"]);
+            idol_clothes[item["value"]]["basedir"].push(item["basedir"]);
         }
     }
 
@@ -198,7 +230,7 @@ function LoadAsset() {
     // 메모리 관리를 위한 unload 작업
     assetManager.removeAll();
 
-    const path = [dataURL, "spine", "idols", assetType, assetClothes, "data"].join("/");
+    const path = [dataURL, "spine", assetBaseDir, assetType, assetClothes, "data"].join("/");
     assetManager.loadText(pathJSON || path + ".json");
     assetManager.loadText(pathAtlas || path + ".atlas");
     assetManager.loadTexture(pathTexture || path + ".png");
@@ -223,7 +255,7 @@ function Load() {
 function LoadSpine(initialAnimation, premultipliedAlpha) {
     // Load the texture atlas using name.atlas and name.png from the AssetManager.
     // The function passed to TextureAtlas is used to resolve relative paths.
-    const fileArray = [dataURL, "spine", "idols", assetType, assetClothes, "data"];
+    const fileArray = [dataURL, "spine", assetBaseDir, assetType, assetClothes, "data"];
     const filePath = fileArray.join("/");
     const subPath = fileArray.slice(0, 5).join("/");
 
@@ -261,9 +293,37 @@ function LoadSpine(initialAnimation, premultipliedAlpha) {
 
     try {
         animationState.setAnimation(0, initialAnimation, true);
-    } catch (e) {
+    } catch {
+    try {
         animationState.setAnimation(0, "talk_wait", true); // 하즈키 SD 관련 수정
+    } catch {
+    try {
+        animationState.setAnimation(0, "photo_ok", true); // gasha_cb init pose
+    } catch {
+    try {
+        animationState.setAnimation(0, "animation", true); // no animation case
+    } catch {
+    try {
+        animationState.setAnimation(0, "talk_wait_01", true); // sub/cb/ugc
+    } catch {
+    try {
+        animationState.setAnimation(0, "adv_fly", true); // sub/cb/bird
+    } catch {
+    try {
+        animationState.setAnimation(0, "dance_wait", true); // sub/cb/staff_dance
+    } catch {
+    try {
+        animationState.setAnimation(0, "visual_wait", true); // sub/cb/staff_visual
+    } catch {
+    try {
+        animationState.setAnimation(0, "vocal_wait", true); // sub/cb/staff_vocal
+    } catch {
+    try {
+        animationState.setAnimation(0, "ok", true); // sub/cb/staff_miko
+    } catch {
+        animationState.setAnimation(0, "adv_talk", true); // sub/cb/producer
     }
+    }}}}}}}}}
 
     if (debug) {
         animationState.addListener({
@@ -315,19 +375,25 @@ function SetupTypeList() {
     const typeList = $("#typeList")[0];
     const typeTextList = gameInfo.type;
     const typesData = assetInfo["idols"][assetIdol]["clothes"][assetClothes]["type"];
+    const basedirData = assetInfo["idols"][assetIdol]["clothes"][assetClothes]["basedir"];
     typeList.innerHTML = "";
 
-    for (const typeKey of typesData) {
+    for (const ind in typesData) {
+        const typeKey = typesData[ind];
+        const basedirKey = basedirData[ind];
         const option = document.createElement("option");
-        const typeText = _.find(typeTextList, { id: typeKey }) || { name: "타입" };
+        const typeText = _.find(typeTextList, { id: typeKey }) || { name: typeKey };
         option.textContent = typeText.name;
-        option.value = typeKey;
+//        option.value = {"type": typeKey, "basedir": basedirKey};
+        option.value = typeKey + "|" + basedirKey;
+//        option.valueBaseDir = basedirKey;
         option.selected = typeKey === assetType;
         typeList.appendChild(option);
     }
 
     typeList.onchange = () => {
-        assetType = typeList.value;
+        assetType = typeList.value.split("|")[0];
+        assetBaseDir = typeList.value.split("|")[1];
         ClearDragStatus();
         requestAnimationFrame(LoadAsset);
     };
@@ -336,7 +402,9 @@ function SetupTypeList() {
 
     const firstNode = $("#typeList option")[0];
     firstNode.selected = true;
-    assetType = firstNode.value;
+    assetType = firstNode.value.split("|")[0];
+    assetBaseDir = firstNode.value.split("|")[1];
+//    assetBaseDir = firstNode.valueBaseDir;
 }
 
 function SetupClothesList() {
@@ -346,10 +414,34 @@ function SetupClothesList() {
 
     for (const clothesKey of Object.keys(clothesData)) {
         const option = document.createElement("option");
-        const clothesID = clothesKey; // todo
+        var clothesID = clothesKey; // todo
+
+        //todo comeon...
+        if (!isNaN(parseInt(clothesKey))) {
+            if (clothesKey.length === 10) {
+                var idArray = clothesKey.split("").map((item) => {
+                        return parseInt(item); });
+                const parsed = {
+                    "value": clothesKey,
+                    "type_": idArray.shift(),
+                    "special_type": parseInt(idArray.shift()),
+                    "rarity": idArray.shift(),
+                    "idol_id": parseInt(idArray.splice(0, 3).join("")),
+                    "release_id": parseInt(idArray.splice(0, 3).join("")),
+                    "other": idArray.shift()
+                };
+                clothesID = _.find(gameInfo.rarity, {id: parseInt(parsed["rarity"])})["name"];
+                clothesID += parseInt(parsed["release_id"]);
+                if (parsed["special_type"] != 0) {
+                    clothesID += "_"+parsed["special_type"];
+                }
+//                clothesID += "_" + parsed["other"];
+            }
+        }
+
         option.textContent = clothesID; // todo
-        option.value = clothesID;
-        option.selected = clothesID === assetClothes;
+        option.value = clothesKey;
+        option.selected = clothesKey === assetClothes;
         clothesList.appendChild(option);
     }
 
@@ -375,9 +467,7 @@ function SetupIdolList() {
     for (const idolKey of Object.keys(charactersData)) {
         const option = document.createElement("option");
 //        const idolText = charactersData[idolKey];
-        const idolText = _.find(idolTextList, { id: parseInt(idolKey) }) || {
-            name: "아이돌"
-        };
+        const idolText = _.find(idolTextList, { id: parseInt(idolKey) }) || { name: idolKey };
         option.textContent = idolText["name"].split(" ").pop();
         option.value = idolKey;
         option.selected = idolKey === assetIdol;
